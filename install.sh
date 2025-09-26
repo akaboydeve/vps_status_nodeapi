@@ -3,7 +3,7 @@ set -e
 
 
 echo "=== Node Agent Installer ==="
-read -p "Enter API endpoint (e.g. http://localhost:3000/api/nodes): " endpoint
+read -p "Enter API endpoint (e.g. https://monitor.hexonode.com/api/nodes ): " endpoint
 read -p "Enter Node Name: " nodename
 read -p "Enter Node IP: " nodeip
 
@@ -17,14 +17,29 @@ if [ -d "/etc/node-agent" ]; then
   sudo systemctl daemon-reload
 fi
 
-# Install python + pip + psutil if not present
+echo "[*] Checking for python3..."
 if ! command -v python3 >/dev/null; then
-    echo "[*] Installing python3..."
-    sudo apt-get update -y
-    sudo apt-get install -y python3 python3-pip
+  echo "[*] Installing python3..."
+  sudo apt-get update -y
+  sudo apt-get install -y python3
 fi
 
-sudo pip3 install psutil requests --quiet
+echo "[*] Checking for pip3..."
+if ! command -v pip3 >/dev/null; then
+  echo "[*] Installing python3-pip..."
+  sudo apt-get install -y python3-pip
+fi
+
+# Check for required Python packages
+missing_pkgs=""
+python3 -m pip show psutil >/dev/null 2>&1 || missing_pkgs="psutil $missing_pkgs"
+python3 -m pip show requests >/dev/null 2>&1 || missing_pkgs="requests $missing_pkgs"
+if [ ! -z "$missing_pkgs" ]; then
+  echo "[*] Installing required Python packages: $missing_pkgs"
+  sudo pip3 install $missing_pkgs --quiet
+else
+  echo "[*] Required Python packages already installed."
+fi
 
 # Create install directory
 sudo mkdir -p /etc/node-agent

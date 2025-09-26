@@ -20,7 +20,26 @@ API_ENDPOINT = config["endpoint"]
 NODENAME = config["nodename"]
 NODEIP = config["nodeip"]
 
+
+# Track previous network counters for KBps calculation
+prev_recv = None
+prev_sent = None
+INTERVAL = 20
+
 def collect_stats():
+    global prev_recv, prev_sent
+    net = psutil.net_io_counters()
+    curr_recv = net.bytes_recv
+    curr_sent = net.bytes_sent
+    if prev_recv is None or prev_sent is None:
+        # First run, can't calculate KBps
+        kbps_in = 0
+        kbps_out = 0
+    else:
+        kbps_in = ((curr_recv - prev_recv) / 1024) / INTERVAL
+        kbps_out = ((curr_sent - prev_sent) / 1024) / INTERVAL
+    prev_recv = curr_recv
+    prev_sent = curr_sent
     return {
         "nodename": NODENAME,
         "cpuCores": psutil.cpu_count(logical=True),
@@ -31,18 +50,20 @@ def collect_stats():
         "DIskUsed": psutil.disk_usage('/').percent,
         "OS": os.popen("lsb_release -d").read().strip().replace("Description:\t", ""),
         "IP": NODEIP,
-        "network in": psutil.net_io_counters().bytes_recv // 1024,  # KB
-        "network out": psutil.net_io_counters().bytes_sent // 1024  # KB
+        "network in": round(kbps_in, 2),  # KBps
+        "network out": round(kbps_out, 2)  # KBps
     }
 
+
 def main():
+    global prev_recv, prev_sent
     while True:
         try:
             payload = collect_stats()
             requests.post(API_ENDPOINT, json=payload, timeout=5)
         except Exception as e:
             print("Error posting data:", e)
-        time.sleep(20)
+        time.sleep(INTERVAL)
 
 if __name__ == "__main__":
     main()
