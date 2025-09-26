@@ -25,10 +25,10 @@ sudo tee /etc/node-agent/config.json > /dev/null <<EOL
 }
 EOL
 
-# Copy agent
-sudo tee /etc/node-agent/agent.py > /dev/null <<'EOPY'
-<PUT PYTHON CODE FROM ABOVE HERE>
-EOPY
+
+# Download agent code from GitHub
+echo "[*] Downloading agent code..."
+sudo curl -sSL https://raw.githubusercontent.com/akaboydeve/vps_status_nodeapi/main/main.py -o /etc/node-agent/agent.py
 
 sudo chmod +x /etc/node-agent/agent.py
 
