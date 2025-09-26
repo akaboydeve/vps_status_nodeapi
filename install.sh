@@ -1,10 +1,21 @@
 #!/bin/bash
 set -e
 
+
 echo "=== Node Agent Installer ==="
 read -p "Enter API endpoint (e.g. http://localhost:3000/api/nodes): " endpoint
 read -p "Enter Node Name: " nodename
 read -p "Enter Node IP: " nodeip
+
+# Remove previous installation if exists
+if [ -d "/etc/node-agent" ]; then
+  echo "[*] Removing previous node-agent installation..."
+  sudo systemctl stop node-agent || true
+  sudo systemctl disable node-agent || true
+  sudo rm -rf /etc/node-agent
+  sudo rm -f /etc/systemd/system/node-agent.service
+  sudo systemctl daemon-reload
+fi
 
 # Install python + pip + psutil if not present
 if ! command -v python3 >/dev/null; then
