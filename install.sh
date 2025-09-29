@@ -30,16 +30,18 @@ if ! command -v pip3 >/dev/null; then
   sudo apt-get install -y python3-pip
 fi
 
-# Check for required Python packages
-missing_pkgs=""
-python3 -m pip show psutil >/dev/null 2>&1 || missing_pkgs="psutil $missing_pkgs"
-python3 -m pip show requests >/dev/null 2>&1 || missing_pkgs="requests $missing_pkgs"
-if [ ! -z "$missing_pkgs" ]; then
-  echo "[*] Installing required Python packages: $missing_pkgs"
-  sudo pip3 install $missing_pkgs --quiet
-else
-  echo "[*] Required Python packages already installed."
+
+# Set up Python virtual environment
+if [ ! -d "/etc/node-agent/venv" ]; then
+  echo "[*] Creating Python virtual environment..."
+  sudo python3 -m venv /etc/node-agent/venv
 fi
+
+# Install required Python packages in venv
+echo "[*] Installing required Python packages in virtual environment..."
+sudo /etc/node-agent/venv/bin/pip install --quiet psutil requests
+
+echo "[*] Required Python packages installed in virtual environment."
 
 # Create install directory
 sudo mkdir -p /etc/node-agent
@@ -65,7 +67,7 @@ Description=Lightweight Node Monitoring Agent
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /etc/node-agent/agent.py
+ExecStart=/etc/node-agent/venv/bin/python /etc/node-agent/agent.py
 Restart=always
 User=root
 
