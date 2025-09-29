@@ -44,6 +44,14 @@ if ! command -v pip3 >/dev/null; then
 fi
 
 
+
+# Ensure python3-venv is installed
+if ! dpkg -s python3-venv >/dev/null 2>&1; then
+  echo "[*] Installing python3-venv..."
+  sudo apt-get update -y
+  sudo apt-get install -y python3-venv
+fi
+
 # Set up Python virtual environment
 if [ ! -d "/etc/node-agent/venv" ]; then
   echo "[*] Creating Python virtual environment..."
