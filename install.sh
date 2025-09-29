@@ -3,9 +3,22 @@ set -e
 
 
 echo "=== Node Agent Installer ==="
-read -p "Enter API endpoint (e.g. https://monitor.hexonode.com/api/nodes ): " endpoint
+
+# Prompt for API endpoint with default
+read -p "Enter API endpoint (press enter to use default: https://monitor.hexonode.com/api/nodes): " endpoint
+if [ -z "$endpoint" ]; then
+  endpoint="https://monitor.hexonode.com/api/nodes"
+fi
+
+# Prompt for Node Name
 read -p "Enter Node Name: " nodename
-read -p "Enter Node IP: " nodeip
+
+# Prompt for Node IP with default (public IP)
+default_ip=$(curl -4 -s ifconfig.me)
+read -p "Enter Node IP (press enter to use detected: $default_ip): " nodeip
+if [ -z "$nodeip" ]; then
+  nodeip="$default_ip"
+fi
 
 # Remove previous installation if exists
 if [ -d "/etc/node-agent" ]; then
