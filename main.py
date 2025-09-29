@@ -5,6 +5,7 @@ import time
 import json
 import sys
 import os
+import subprocess
 
 # Load config
 CONFIG_FILE = "/etc/node-agent/config.json"
@@ -55,12 +56,27 @@ def collect_stats():
     }
 
 
+def reboot_system():
+    print("Reboot requested by API. Rebooting now...")
+    try:
+        subprocess.run(["sudo", "reboot"], check=True)
+    except Exception as e:
+        print("Failed to reboot:", e)
+
 def main():
     global prev_recv, prev_sent
     while True:
         try:
             payload = collect_stats()
-            requests.post(API_ENDPOINT, json=payload, timeout=5)
+            response = requests.post(API_ENDPOINT, json=payload, timeout=5)
+            # Check for reboot instruction in API response
+            if response.ok:
+                try:
+                    data = response.json()
+                    if data.get("reboot") is True:
+                        reboot_system()
+                except Exception as e:
+                    print("Error parsing API response:", e)
         except Exception as e:
             print("Error posting data:", e)
         time.sleep(INTERVAL)

@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-
 echo "=== Node Agent Installer ==="
 
 # Prompt for API endpoint with default
@@ -43,14 +42,15 @@ if ! command -v pip3 >/dev/null; then
   sudo apt-get install -y python3-pip
 fi
 
-
-
 # Ensure python3-venv is installed
 if ! dpkg -s python3-venv >/dev/null 2>&1; then
   echo "[*] Installing python3-venv..."
   sudo apt-get update -y
   sudo apt-get install -y python3-venv
 fi
+
+# Create install directory
+sudo mkdir -p /etc/node-agent
 
 # Set up Python virtual environment
 if [ ! -d "/etc/node-agent/venv" ]; then
@@ -61,11 +61,9 @@ fi
 # Install required Python packages in venv
 echo "[*] Installing required Python packages in virtual environment..."
 sudo /etc/node-agent/venv/bin/pip install --quiet psutil requests
-
 echo "[*] Required Python packages installed in virtual environment."
 
-# Create install directory
-sudo mkdir -p /etc/node-agent
+# Write config.json
 sudo tee /etc/node-agent/config.json > /dev/null <<EOL
 {
   "endpoint": "$endpoint",
@@ -74,11 +72,15 @@ sudo tee /etc/node-agent/config.json > /dev/null <<EOL
 }
 EOL
 
+# (Optional) Copy example config if not present
+if [ ! -f /etc/node-agent/config.json ]; then
+    sudo cp config.json.example /etc/node-agent/config.json
+    echo "Copied example config to /etc/node-agent/config.json"
+fi
 
 # Download agent code from GitHub
 echo "[*] Downloading agent code..."
 sudo curl -sSL https://raw.githubusercontent.com/akaboydeve/vps_status_nodeapi/main/main.py -o /etc/node-agent/agent.py
-
 sudo chmod +x /etc/node-agent/agent.py
 
 # Create systemd service
@@ -100,6 +102,19 @@ EOL
 sudo systemctl daemon-reexec
 sudo systemctl enable node-agent
 sudo systemctl restart node-agent
+
+# Add passwordless sudo for reboot for the current user
+USERNAME=$(whoami)
+SUDOERS_LINE="$USERNAME ALL=(ALL) NOPASSWD: /usr/sbin/reboot"
+SUDOERS_FILE="/etc/sudoers.d/node-agent-reboot"
+
+if ! sudo grep -q "$SUDOERS_LINE" "$SUDOERS_FILE" 2>/dev/null; then
+    echo "$SUDOERS_LINE" | sudo tee "$SUDOERS_FILE" > /dev/null
+    sudo chmod 440 "$SUDOERS_FILE"
+    echo "Added passwordless sudo for reboot to $SUDOERS_FILE"
+else
+    echo "Passwordless sudo for reboot already set."
+fi
 
 echo "=== Installation Complete ==="
 echo "Service running: systemctl status node-agent"
